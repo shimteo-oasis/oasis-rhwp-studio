@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; media-src blob:; connect-src 'none'; base-uri 'none'; form-action 'none'">
+<title>OASIS 회의 녹음 · 텍스트 변환</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#edf3f0;color:#203e37;font:15px/1.6 system-ui,sans-serif}main{max-width:900px;margin:28px auto;padding:0 20px}header{background:#174839;color:white;padding:26px 28px;border-radius:20px 20px 0 0;position:relative}small{font-size:11px;letter-spacing:1px}h1{font-size:25px;margin:8px 60px 4px 0}header p{margin:0;font-size:13px}#close{position:absolute;right:24px;top:26px;background:transparent;color:white;border-color:#ffffff70}article{background:white;padding:24px 28px;border-radius:0 0 20px 20px}#status{padding:12px 16px;background:#edf4f0;border-radius:9px;margin-bottom:20px;overflow-wrap:anywhere}#status[data-error=true]{background:#fff0ed;color:#ae3329}section+section{border-top:1px solid #dde6e1;margin-top:24px;padding-top:22px}h2{font-size:16px;margin:0 0 12px}.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}button{font:600 14px system-ui;cursor:pointer;border:1px solid #b8cdc3;border-radius:8px;padding:11px 15px;background:white;color:#205c47}button.primary{background:#23664e;color:white;border-color:#23664e}button:disabled{opacity:.45;cursor:default}button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid #81bda4;outline-offset:2px}#time{font-size:42px;font-weight:700;font-variant-numeric:tabular-nums}#state{margin-left:auto;font-size:13px;color:#577066}progress{width:100%;height:6px;margin:12px 0 18px;accent-color:#23664e}audio{width:100%;margin-top:16px}label{display:block;font-size:13px;margin:8px 0 16px}input[type=checkbox]{vertical-align:middle;accent-color:#23664e}textarea{width:100%;min-height:190px;resize:vertical;padding:13px;border:1px solid #b8cdc3;border-radius:9px;font:15px/1.7 system-ui;color:#203e37;margin-bottom:12px}.hint,#fileInfo,#elapsed{font-size:12px;color:#627b71;margin:10px 0}footer{font-size:12px;color:#627b71;padding:16px 4px} @media(max-width:520px){main{margin:12px auto;padding:0 12px}header,article{padding:20px}h1{font-size:21px}#close{right:16px;top:20px}button{padding:10px 12px}}
+</style>
+</head>
+<body><main>
+<header><small>OASIS · MEETING LAB</small><h1>회의 녹음 · 텍스트 변환</h1><p>녹음부터 텍스트까지, 이 창에서 · 관리자 테스트 · 최대 3분</p><button id="close">닫기</button></header>
+<article>
+<div id="status" role="status" aria-live="polite">인트라넷 연결을 확인하고 있습니다.</div>
+<section><h2>01　음성 준비</h2><div class="row"><span id="time">00:00</span><span id="state">준비</span></div><progress id="progress" max="180" value="0"></progress>
+<div class="row"><button id="start" class="primary" disabled>● 녹음 시작</button><button id="stop" disabled>■ 녹음 종료</button><button id="choose" disabled>녹음 파일 선택</button><input id="file" type="file" accept="audio/*,.webm,.wav,.mp3,.m4a,.mp4,.ogg" hidden></div>
+<p class="hint">참석자에게 녹음을 알린 뒤 시작해 주세요. 마이크 권한은 이 창에서 허용합니다. 기존 파일은 3분·8MB 이내로 선택하세요.</p>
+<audio id="audio" controls hidden></audio><div id="fileInfo"></div><button id="download" disabled>녹음 다운로드</button></section>
+<section><h2>02　텍스트 변환</h2><label><input id="consent" type="checkbox"> 참석자에게 녹음을 알렸으며, 시험 음성을 Google Gemini로 전송하는 데 동의합니다. 개인정보가 없는 시험 내용을 사용합니다.</label>
+<div class="row"><button id="transcribe" class="primary" disabled>텍스트로 변환</button><span id="elapsed"></span></div><p class="hint">인트라넷에 설정된 Gemini API를 사용하며 사용량에 따른 비용이 발생할 수 있습니다.</p></section>
+<section><h2>03　변환 결과</h2><textarea id="text" aria-label="변환 결과" placeholder="변환 결과가 여기에 표시됩니다. 내용을 확인하고 수정할 수 있습니다."></textarea><div class="row"><button id="downloadText" disabled>텍스트 다운로드</button><button id="reset">새로 시작</button></div></section>
+</article><footer>원래 인트라넷 탭은 연결을 위해 열어 두세요. 모든 작업은 이 창에서 진행합니다.<br>녹음과 결과는 자동 저장되지 않습니다. 창을 닫기 전에 필요한 파일을 다운로드하세요.</footer>
+</main>
+<script>
+(function(){
+ 'use strict';
+ var $=function(id){return document.getElementById(id);},params=new URLSearchParams(location.hash.slice(1)),session=params.get('session'),parentOrigin=params.get('origin'),allowed=false;
+ try{var parent=new URL(parentOrigin);allowed=parent.protocol==='https:'&&(parent.hostname==='script.googleusercontent.com'||parent.hostname.endsWith('-script.googleusercontent.com'));}catch(e){}
+ history.replaceState(null,'',location.pathname+location.search);
+ var valid=allowed&&/^[a-f0-9]{32}$/.test(session||'')&&window.opener&&window.top===window.self;
+ var linked=false,configured=false,lost=false,phase='idle',epoch=0,stream=null,recorder=null,blob=null,url='',filename='',timer=null,elapsedTimer=null,heartbeat=null,lastPong=Date.now(),pending=null,requestId=0;
+ function message(s,error){$('status').textContent=s;$('status').dataset.error=String(!!error);}
+ function post(type,data){if(valid&&!window.opener.closed)window.opener.postMessage(Object.assign({type:type,session:session},data||{}),parentOrigin);}
+ function dirty(){return !!blob||!!$('text').value||phase!=='idle';}
+ function update(){var busy=phase!=='idle';$('start').disabled=!linked||busy;$('choose').disabled=!linked||busy;$('stop').disabled=phase!=='permission'&&phase!=='recording';$('stop').textContent=phase==='permission'?'시작 취소':'■ 녹음 종료';$('download').disabled=!blob;$('transcribe').disabled=busy||!linked||!configured||!blob||!$('consent').checked;$('consent').disabled=phase==='converting';$('text').readOnly=phase==='converting';$('downloadText').disabled=!$('text').value.trim();$('reset').disabled=phase==='converting';$('state').textContent={idle:blob?'음성 준비 완료':'준비',permission:'마이크 허용 대기',recording:'녹음 중',stopping:'녹음 정리 중',converting:'변환 중'}[phase];}
+ function tracks(){if(stream){stream.getTracks().forEach(function(t){t.onended=null;t.stop();});stream=null;}}
+ function clearAudio(){ $('audio').pause();$('audio').removeAttribute('src');$('audio').hidden=true;if(url)URL.revokeObjectURL(url);url='';blob=null;filename='';$('fileInfo').textContent='';}
+ function setAudio(b,name){clearAudio();blob=b;filename=name;url=URL.createObjectURL(b);$('audio').src=url;$('audio').hidden=false;$('fileInfo').textContent=name+' · '+(b.size/1048576).toFixed(2)+' MB';update();}
+ function stop(){if(phase==='permission'){epoch++;phase='idle';message('녹음 시작을 취소했습니다.');update();return;}if(phase==='recording'){phase='stopping';clearInterval(timer);timer=null;if(recorder&&recorder.state!=='inactive')recorder.stop();tracks();update();}}
+ function abandon(){epoch++;clearInterval(timer);clearInterval(elapsedTimer);if(recorder){recorder.onstop=null;recorder.ondataavailable=null;recorder.onerror=null;if(recorder.state!=='inactive')recorder.stop();recorder=null;}tracks();phase='idle';clearAudio();}
+ function disconnected(){if(lost)return;lost=true;linked=false;configured=false;clearInterval(heartbeat);if(phase==='permission'){epoch++;phase='idle';}else if(phase==='recording')stop();if(pending){var p=pending;pending=null;clearTimeout(p.timeout);p.reject(Error('인트라넷 연결이 끊겼습니다. 원본과 결과를 다운로드한 뒤 인트라넷에서 다시 시작해 주세요.'));}message('인트라넷 연결이 끊겼습니다. 원본과 결과를 다운로드한 뒤 인트라넷에서 다시 시작해 주세요.',true);update();}
+ $('start').onclick=async function(){
+  if(!linked||phase!=='idle')return;if(dirty()&&!confirm('새로 녹음하면 현재 음성과 결과가 지워집니다. 계속할까요?'))return;
+  var token=++epoch;phase='permission';message('이 창의 마이크 사용을 허용해 주세요.');update();
+  try{
+   if(!navigator.mediaDevices||!window.MediaRecorder)throw Error('이 브라우저에서 녹음을 지원하지 않습니다. Chrome에서 열거나 녹음 파일을 선택해 주세요.');
+   var acquired=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true},video:false});
+   if(token!==epoch||!linked){acquired.getTracks().forEach(function(t){t.stop();});return;}stream=acquired;
+   var mime=['audio/webm;codecs=opus','audio/mp4','audio/ogg;codecs=opus'].find(function(m){return MediaRecorder.isTypeSupported(m);});
+   var r=new MediaRecorder(stream,Object.assign({audioBitsPerSecond:64000},mime?{mimeType:mime}:{})),chunks=[],size=0,startAt=Date.now();recorder=r;
+   r.ondataavailable=function(e){if(token!==epoch||!e.data.size)return;chunks.push(e.data);size+=e.data.size;if(size>8*1048576)stop();};
+   r.onstop=function(){if(token!==epoch)return;clearInterval(timer);timer=null;tracks();recorder=null;phase='idle';var recorded=new Blob(chunks,{type:r.mimeType||'audio/webm'});if(recorded.size&&recorded.size<=8*1048576){setAudio(recorded,'회의녹음_'+new Date().toISOString().replace(/[:.]/g,'-')+(recorded.type.includes('mp4')?'.m4a':recorded.type.includes('ogg')?'.ogg':'.webm'));message(linked?'녹음이 완료되었습니다. 재생해 확인한 뒤 전송 동의를 체크하고 텍스트로 변환하세요.':'인트라넷 연결이 끊겼습니다. 녹음을 다운로드해 보관하세요.',!linked);}else message('녹음 데이터가 없거나 8MB를 초과했습니다. 다시 시도해 주세요.',true);update();};
+   r.onerror=function(){stop();};stream.getTracks().forEach(function(t){t.onended=stop;});r.start(1000);clearAudio();$('text').value='';$('elapsed').textContent='';phase='recording';$('time').textContent='00:00';$('progress').value=0;message('녹음 중입니다.');
+   timer=setInterval(function(){var sec=Math.floor((Date.now()-startAt)/1000);$('time').textContent=String(Math.floor(sec/60)).padStart(2,'0')+':'+String(sec%60).padStart(2,'0');$('progress').value=sec;if(sec>=180)stop();},200);update();
+  }catch(e){if(token!==epoch)return;tracks();recorder=null;phase='idle';message(e.name==='NotAllowedError'?'마이크 권한이 거부되었습니다. 주소 표시줄에서 허용하거나 녹음 파일을 선택해 주세요.':e.message||'녹음을 시작하지 못했습니다.',true);update();}
+ };
+ $('stop').onclick=stop;$('choose').onclick=function(){if(linked&&phase==='idle')$('file').click();};
+ $('file').onchange=function(){var f=this.files&&this.files[0];this.value='';if(!f||phase!=='idle'||!linked)return;if(!f.size||f.size>8*1048576){message('0바이트보다 크고 8MB 이하인 음성 파일을 선택해 주세요.',true);return;}if(dirty()&&!confirm('선택한 파일로 현재 음성과 결과를 바꿀까요?'))return;setAudio(f,f.name);$('text').value='';$('time').textContent='00:00';$('progress').value=0;$('elapsed').textContent='';message('파일을 준비했습니다. 재생해 확인하고 전송 동의 후 변환하세요.');update();};
+ async function pcmWav(b){
+  var Audio=window.AudioContext||window.webkitAudioContext;if(!Audio)throw Error('이 브라우저에서 음성을 변환할 수 없습니다.');var ctx=new Audio(),decoded;
+  try{decoded=await ctx.decodeAudioData(await b.arrayBuffer());}finally{await ctx.close();}
+  if(!decoded.duration||decoded.duration>180.5)throw Error('3분 이내의 음성을 사용해 주세요.');
+  var frames=Math.min(2880000,Math.ceil(decoded.duration*16000)),offline=new OfflineAudioContext(1,frames,16000),source=offline.createBufferSource();source.buffer=decoded;source.connect(offline.destination);source.start();var rendered=await offline.startRendering(),samples=rendered.getChannelData(0),buffer=new ArrayBuffer(44+frames*2),v=new DataView(buffer);
+  function str(at,s){for(var i=0;i<s.length;i++)v.setUint8(at+i,s.charCodeAt(i));}str(0,'RIFF');v.setUint32(4,buffer.byteLength-8,true);str(8,'WAVEfmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);v.setUint32(24,16000,true);v.setUint32(28,32000,true);v.setUint16(32,2,true);v.setUint16(34,16,true);str(36,'data');v.setUint32(40,frames*2,true);for(var i=0;i<frames;i++){var sample=Math.max(-1,Math.min(1,samples[i]));v.setInt16(44+i*2,sample<0?sample*32768:sample*32767,true);}return new Blob([buffer],{type:'audio/wav'});
+ }
+ function base64(b){return new Promise(function(resolve,reject){var r=new FileReader();r.onload=function(){resolve(String(r.result).split(',')[1]);};r.onerror=function(){reject(Error('음성 파일을 읽지 못했습니다.'));};r.readAsDataURL(b);});}
+ $('transcribe').onclick=async function(){
+  if($('transcribe').disabled)return;if($('text').value&&!confirm('현재 결과를 새 변환 결과로 바꿀까요?'))return;var token=epoch,started=Date.now();phase='converting';message('음성을 준비하고 텍스트로 변환하고 있습니다.');update();elapsedTimer=setInterval(function(){$('elapsed').textContent='요청 경과 '+Math.floor((Date.now()-started)/1000)+'초';},1000);
+  try{var audio=await base64(await pcmWav(blob));if(token!==epoch||!linked)throw Error('인트라넷 연결이 끊겼습니다. 원본을 다운로드해 주세요.');var text=await new Promise(function(resolve,reject){var id=++requestId;pending={id:id,resolve:resolve,reject:reject,timeout:setTimeout(function(){pending=null;reject(Error('변환 응답 시간이 초과되었습니다. 잠시 후 다시 시도해 주세요.'));},375000)};post('oasis-meeting-transcribe',{requestId:id,audio:audio,consent:true});});if(token!==epoch)return;$('text').value=text;message('텍스트 변환이 완료되었습니다. 내용을 확인하고 다운로드하세요.');}
+  catch(e){if(token===epoch)message(e.message||'텍스트 변환에 실패했습니다. 원본을 보관하고 다시 시도해 주세요.',true);}
+  finally{if(token===epoch){clearInterval(elapsedTimer);elapsedTimer=null;phase='idle';update();}}
+ };
+ function download(b,name){var href=URL.createObjectURL(b),a=document.createElement('a');a.href=href;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(href);},10000);}
+ $('download').onclick=function(){if(blob)download(blob,filename);};$('downloadText').onclick=function(){if($('text').value.trim())download(new Blob(['\ufeff'+$('text').value],{type:'text/plain;charset=utf-8'}),'회의녹음_텍스트.txt');};$('text').oninput=update;$('consent').onchange=update;
+ $('reset').onclick=function(){if(phase==='converting'||(dirty()&&!confirm('현재 녹음과 결과를 지우고 새로 시작할까요?')))return;abandon();$('text').value='';$('consent').checked=false;$('time').textContent='00:00';$('progress').value=0;$('elapsed').textContent='';message(linked?'새 녹음을 시작하거나 파일을 선택하세요.':'인트라넷에서 작업 창을 다시 열어 주세요.',!linked);update();};
+ $('close').onclick=function(){if(dirty()&&!confirm('저장하지 않은 녹음과 결과가 사라집니다. 닫을까요? 이미 전송한 변환 요청은 계속 처리될 수 있습니다.'))return;abandon();$('text').value='';window.close();};
+ window.addEventListener('beforeunload',function(e){if(dirty()){e.preventDefault();e.returnValue='';}});window.addEventListener('pagehide',function(){clearInterval(heartbeat);if(pending){clearTimeout(pending.timeout);pending=null;}abandon();});
+ window.addEventListener('message',function(e){var d=e.data;if(!valid||lost||e.source!==window.opener||e.origin!==parentOrigin||!d||d.session!==session)return;
+  if(d.type==='oasis-meeting-linked'){linked=true;lastPong=Date.now();message('연결되었습니다. 녹음을 시작하거나 파일을 선택하세요.');update();}
+  else if(d.type==='oasis-meeting-status'){configured=d.configured===true;if(!configured)message(d.error||'음성 변환 설정을 확인해 주세요.',true);update();}
+  else if(d.type==='oasis-meeting-pong')lastPong=Date.now();
+  else if(d.type==='oasis-meeting-disconnected')disconnected();
+  else if(d.type==='oasis-meeting-result'&&pending&&d.requestId===pending.id){var p=pending;pending=null;clearTimeout(p.timeout);if(d.ok&&typeof d.text==='string')p.resolve(d.text);else p.reject(Error(typeof d.error==='string'?d.error:'텍스트 변환에 실패했습니다.'));}
+ });
+ update();if(valid){post('oasis-meeting-ready');heartbeat=setInterval(function(){if(window.opener.closed){disconnected();return;}if(!document.hidden&&Date.now()-lastPong>20000){disconnected();return;}if(!linked)post('oasis-meeting-ready');post('oasis-meeting-ping');},3000);document.addEventListener('visibilitychange',function(){if(!document.hidden){lastPong=Date.now();post('oasis-meeting-ping');}});}else message('인트라넷의 「회의 녹음 테스트」 버튼으로 이 창을 열어 주세요.',true);
+})();
+</script></body></html>
