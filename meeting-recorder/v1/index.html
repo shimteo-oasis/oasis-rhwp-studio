@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="ko">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; media-src blob:; connect-src 'none'; base-uri 'none'; form-action 'none'">
+<title>OASIS 회의 녹음</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#eef4f0;color:#203d32;font:15px/1.65 system-ui,sans-serif}main{max-width:620px;margin:30px auto;padding:24px}header{background:#164737;color:white;padding:24px;border-radius:18px 18px 0 0}h1{font-size:25px;margin:4px 0}.card{background:white;padding:24px;border-radius:0 0 18px 18px}p{margin:10px 0}.hint{color:#60746a;font-size:13px}#status{background:#edf4ef;padding:12px;border-radius:8px;white-space:pre-wrap}#status[data-error=true]{background:#fff0ed;color:#962b2b}#time{font-size:44px;font-weight:700;font-variant-numeric:tabular-nums}.row{display:flex;flex-wrap:wrap;gap:10px;margin:16px 0}button{font:600 15px system-ui,sans-serif;padding:11px 16px;border:1px solid #b9ccc2;border-radius:9px;background:white;color:#23543f;cursor:pointer}button.primary{background:#216447;color:white;border-color:#216447}button:disabled{opacity:.45;cursor:not-allowed}audio,progress{width:100%}progress{accent-color:#216447;height:8px}:focus-visible{outline:3px solid #d3952c;outline-offset:3px}@media(max-width:480px){main{margin:0;padding:16px}}
+</style></head>
+<body><main><header><div style="font-size:11px;letter-spacing:.12em">OASIS · MEETING LAB</div><h1>회의 녹음</h1><div>녹음 후 인트라넷으로 가져옵니다 · 최대 3분</div></header>
+<section class="card"><div id="status" role="status" aria-live="polite">연결 확인 중…</div><div id="time">00:00</div><progress id="progress" max="180" value="0" aria-label="녹음 시간"></progress>
+<div class="row"><button id="start" class="primary" disabled>● 녹음 시작</button><button id="stop" disabled>■ 녹음 종료</button></div>
+<p class="hint">참석자에게 녹음을 알리고 시험 내용을 말씀해 주세요. 이 창의 마이크 권한을 허용해야 합니다.</p>
+<audio id="audio" controls hidden></audio><div class="row"><button id="send" class="primary" disabled>인트라넷으로 가져오기</button><button id="download" disabled>녹음 다운로드</button></div>
+<p class="hint">음성은 브라우저 메모리에만 보관합니다. 가져오기는 이 창을 연 인트라넷에만 전달하며, Google 음성 변환은 인트라넷에서 별도로 실행합니다. 원래 인트라넷 창을 열어 두세요.</p>
+</section></main>
+<script>
+(function(){
+  'use strict';
+  var q=new URLSearchParams(location.hash.slice(1)),session=q.get('session')||'',parentOrigin=q.get('origin')||'';
+  var allowed=false;
+  try{var parent=new URL(parentOrigin);allowed=parent.protocol==='https:'&&(parent.hostname==='script.googleusercontent.com'||parent.hostname.endsWith('-script.googleusercontent.com'))&&parent.origin===parentOrigin;}catch(e){}
+  var valid=allowed&&/^[a-f0-9]{32}$/.test(session)&&!!window.opener&&window.top===window.self,linked=false;
+  history.replaceState(null,'',location.pathname);
+  var el=function(id){return document.getElementById(id);},phase='idle',epoch=0,stream=null,recorder=null,chunks=[],size=0,timer=null,started=0,blob=null,url='',sent=false,reason='';
+  function say(s,error){el('status').textContent=s;el('status').dataset.error=error?'true':'false';}
+  function paint(){el('start').disabled=!valid||!linked||phase!=='idle';el('stop').disabled=phase!=='recording'&&phase!=='permission';el('stop').textContent=phase==='permission'?'권한 요청 취소':'■ 녹음 종료';el('send').disabled=!blob||phase!=='idle'||sent||!valid||!linked;el('download').disabled=!blob;}
+  function off(){if(stream){stream.getTracks().forEach(function(t){t.onended=null;t.stop();});stream=null;}clearInterval(timer);timer=null;}
+  function discard(){if(url)URL.revokeObjectURL(url);url='';blob=null;el('audio').pause();el('audio').removeAttribute('src');el('audio').hidden=true;}
+  function tell(type,extra){if(valid)window.opener.postMessage(Object.assign({type:type,session:session},extra||{}),parentOrigin);}
+  function cleanup(){epoch++;off();if(recorder&&recorder.state!=='inactive')recorder.stop();discard();chunks=[];phase='idle';sent=true;valid=false;linked=false;paint();}
+  function stop(message){
+    if(phase==='permission'){epoch++;phase='idle';paint();say('마이크 요청을 취소했습니다.');return;}
+    if(phase!=='recording')return;reason=message||'';phase='stopping';paint();clearInterval(timer);if(recorder.state!=='inactive')recorder.stop();off();
+  }
+  el('start').onclick=async function(){
+    if(!valid||!linked||phase!=='idle')return;if(blob&&!sent&&!confirm('현재 녹음을 지우고 다시 녹음할까요?'))return;
+    if(!navigator.mediaDevices||!window.MediaRecorder){say('이 브라우저는 녹음을 지원하지 않습니다. PC Chrome을 사용해 주세요.',true);return;}
+    phase='permission';paint();say('브라우저에서 마이크 사용을 허용해 주세요.');var token=++epoch;
+    try{
+      var acquired=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true},video:false});
+      if(token!==epoch){acquired.getTracks().forEach(function(t){t.stop();});return;}stream=acquired;
+      var mime=['audio/webm;codecs=opus','audio/mp4','audio/ogg;codecs=opus'].find(function(t){return MediaRecorder.isTypeSupported(t);});
+      var active=mime?new MediaRecorder(stream,{mimeType:mime,audioBitsPerSecond:64000}):new MediaRecorder(stream);recorder=active;chunks=[];size=0;reason='';
+      active.ondataavailable=function(e){if(token!==epoch||!e.data.size)return;chunks.push(e.data);size+=e.data.size;if(size>=8*1024*1024)stop('용량 제한에 도달했습니다.');};
+      active.onstop=function(){if(token!==epoch)return;off();phase='idle';blob=new Blob(chunks,{type:active.mimeType||mime||'audio/webm'});chunks=[];if(blob.size){url=URL.createObjectURL(blob);el('audio').src=url;el('audio').hidden=false;say((reason?reason+' ':'')+'재생해 확인한 뒤 「인트라넷으로 가져오기」를 누르세요.');}else{blob=null;say('녹음 데이터가 없습니다. 다시 시도해 주세요.',true);}paint();};
+      active.onerror=function(){stop('녹음 오류가 발생했습니다. 남은 음성을 확인해 주세요.');};stream.getTracks().forEach(function(t){t.onended=function(){stop('마이크 연결이 끊겼습니다.');};});
+      active.start(1000);discard();sent=false;phase='recording';started=Date.now();el('time').textContent='00:00';el('progress').value=0;paint();say('녹음 중입니다.');
+      timer=setInterval(function(){var s=Math.floor((Date.now()-started)/1000);el('time').textContent=String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');el('progress').value=s;if(s>=180)stop('3분 제한으로 종료했습니다.');},200);
+    }catch(e){if(token!==epoch)return;off();phase='idle';paint();say(e.name==='NotAllowedError'?'마이크 사용이 거부되었습니다. 주소창 옆 사이트 권한에서 마이크를 허용한 뒤 다시 시도해 주세요.':'마이크를 열 수 없습니다. 연결 상태와 다른 앱의 사용 여부를 확인해 주세요.',true);}
+  };
+  el('stop').onclick=function(){stop();};
+  el('send').onclick=function(){if(!valid||!blob||phase!=='idle'||sent)return;if(window.opener.closed){say('인트라넷 창이 닫혔습니다. 녹음을 다운로드해 보관한 뒤 인트라넷에서 파일을 선택해 주세요.',true);return;}tell('oasis-meeting-audio',{audio:blob});say('인트라넷에서 녹음을 받는 중입니다. 창이 그대로면 원래 화면이 열려 있는지 확인해 주세요.');};
+  el('download').onclick=function(){if(!blob)return;var a=document.createElement('a');a.href=url;a.download='회의녹음_테스트.'+(blob.type.indexOf('mp4')>=0?'m4a':blob.type.indexOf('ogg')>=0?'ogg':'webm');a.click();};
+  window.addEventListener('message',function(e){if(!valid||e.source!==window.opener||e.origin!==parentOrigin||!e.data||e.data.session!==session)return;if(e.data.type==='oasis-meeting-linked'){linked=true;say('연결되었습니다. 녹음 시작을 누르세요.');paint();}else if(e.data.type==='oasis-meeting-accepted'){sent=true;paint();say('인트라넷으로 가져왔습니다. 원래 화면에서 텍스트로 변환해 주세요.');window.close();}else if(e.data.type==='oasis-meeting-cancel'){cleanup();window.close();}});
+  window.addEventListener('beforeunload',function(e){if(phase!=='idle'||blob&&!sent){e.preventDefault();e.returnValue='';}});
+  window.addEventListener('pagehide',cleanup);
+  say(valid?'인트라넷과 연결하는 중…':'인트라넷의 「회의 녹음 테스트」에서 녹음 창을 열어 주세요.',!valid);paint();if(valid){tell('oasis-meeting-ready');setTimeout(function(){if(valid&&!linked)say('인트라넷과 연결하지 못했습니다. 원래 화면에서 녹음 창을 다시 열어 주세요.',true);},10000);}
+})();
+</script></body></html>
