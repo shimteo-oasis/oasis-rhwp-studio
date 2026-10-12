@@ -1,0 +1,98 @@
+{
+  "date": "2026-10-12",
+  "browser": "Chrome headless on Windows; CDP simulated Korean composition",
+  "baselineReproduced": true,
+  "checks": {
+    "imeTyping": true,
+    "backspace": true,
+    "undoRedo": true,
+    "enterAndSpacedText": true,
+    "hwpxExportReopen": true
+  },
+  "at130": {
+    "baseline": {
+      "characters": 130,
+      "rows": [
+        {
+          "length": 46,
+          "width": 625
+        },
+        {
+          "length": 84,
+          "width": 625
+        },
+        {
+          "length": 0,
+          "width": 625
+        }
+      ]
+    },
+    "fixed": {
+      "characters": 130,
+      "rows": [
+        {
+          "length": 46,
+          "width": 625
+        },
+        {
+          "length": 46,
+          "width": 625
+        },
+        {
+          "length": 38,
+          "width": 506.7
+        }
+      ]
+    }
+  },
+  "at300": {
+    "characters": 300,
+    "rows": [
+      {
+        "length": 46,
+        "width": 625
+      },
+      {
+        "length": 46,
+        "width": 625
+      },
+      {
+        "length": 46,
+        "width": 625
+      },
+      {
+        "length": 46,
+        "width": 625
+      },
+      {
+        "length": 46,
+        "width": 625
+      },
+      {
+        "length": 46,
+        "width": 625
+      },
+      {
+        "length": 24,
+        "width": 320
+      }
+    ]
+  },
+  "sdk": {
+    "sdk": "0.8.6",
+    "result": {
+      "pages": 1,
+      "reopenedPages": 1,
+      "bytes": 33438,
+      "svgChars": 319343,
+      "roundtripSvgChars": 319343
+    },
+    "errors": []
+  },
+  "visualReview": "Before/after trailing-row compression and reopened document inspected locally. No fixture or document image is published.",
+  "limitations": [
+    "Physical Windows IME and live employee GAS sessions were not automated.",
+    "Browser HWPX serialization/reopen tested; no real business document was saved or approved.",
+    "Large-document responsiveness was not measured; no performance improvement claim."
+  ]
+}

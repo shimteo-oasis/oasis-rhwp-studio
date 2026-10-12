@@ -6,10 +6,22 @@ Self-hosted, versioned builds of the open-source [RHWP project](https://github.c
 
 - Studio: `v0.8.7`
 - Source commit: `1a76570e833917d15817415a53c09ad61ab3203f`
-- Release URL: https://shimteo-oasis.github.io/oasis-rhwp-studio/releases/rhwp-0.8.7-1a76570e/
+- Release URL: https://shimteo-oasis.github.io/oasis-rhwp-studio/releases/rhwp-0.8.7-1a76570e-cell-wrap-20261012/
 - Tested embed SDK: `@rhwp/editor@0.8.6`
 
 This repository contains public editor assets, build metadata, and license notices. Documents are opened in the browser; this static site has no document storage API.
+
+## Cell wrapping hotfix (2026-10-12)
+
+Incremental table-cell input could retain incorrect row boundaries and squeeze the trailing row before wrapping. The new release selects the bridge's existing immediate insert/replace/delete fallback so row layout is recalculated after each cell edit. Ordinary body and nested-cell paths are unchanged. The official WASM binary is unchanged; this is a distribution bridge hotfix, not a Rust rebuild.
+
+Reproduce the hotfix from the retained original release in a clean checkout where the target directory does not already exist:
+
+```sh
+node build/create-cell-wrap-release.mjs
+```
+
+The script verifies all original input checksums and exactly three capability guards before writing a separate release directory. It refuses to overwrite an existing release. `CELL-WRAP-VERIFICATION.json` records browser acceptance results. The immediate fallback prioritizes layout correctness; large-document input responsiveness has not been certified. The original release remains available for rollback.
 
 ## Update policy
 
@@ -31,7 +43,7 @@ The script verifies the exact source commit and binary checksums, installs the l
 import { createEditor } from 'https://cdn.jsdelivr.net/npm/@rhwp/editor@0.8.6/index.js';
 
 const editor = await createEditor(document.getElementById('editor'), {
-  studioUrl: 'https://shimteo-oasis.github.io/oasis-rhwp-studio/releases/rhwp-0.8.7-1a76570e/'
+  studioUrl: 'https://shimteo-oasis.github.io/oasis-rhwp-studio/releases/rhwp-0.8.7-1a76570e-cell-wrap-20261012/'
 });
 ```
 

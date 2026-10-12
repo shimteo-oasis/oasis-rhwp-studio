@@ -1,0 +1,29 @@
+{
+  "sourceSha": "1a76570e833917d15817415a53c09ad61ab3203f",
+  "binarySha256": {
+    "rhwp.js": "70cde06a369fa7fd4fc8bc8f3d6acaee158596ba1a116a2c72159002b0b5654e",
+    "rhwp_bg.wasm": "54cf95014312e605c51b98eb9021247ea79ef2bbd0a7080e11c011d0246e3989"
+  },
+  "packageLockGitBlobSha256": "400d43cd0a7311c8e29b7a87308d6dbdd1750dddc295e7474c0142c82143689c",
+  "base": "/oasis-rhwp-studio/releases/rhwp-0.8.7-1a76570e-cell-wrap-20261012/",
+  "disableExternalWebFonts": true,
+  "pwa": false,
+  "note": "No upstream Pages request. Supply the retained release rhwp.js and rhwp_bg.wasm; Git/npm dependencies may still require their normal network downloads.",
+  "upstream": "https://github.com/edwardkim/rhwp",
+  "tag": "v0.8.7",
+  "officialDeploymentId": 6878229778,
+  "officialWorkflowRun": 37428632702,
+  "node": "v24.19.0",
+  "npm": "11.17.0",
+  "buildCommand": "node build/create-cell-wrap-release.mjs",
+  "buildKind": "Deterministic bridge hotfix of retained distribution; official Rust WASM unchanged",
+  "patch": "Disable deferred cell insert/replace/delete capability guards; existing immediate fallback recomputes rows after each edit. Body/nested-cell paths and document formats unchanged.",
+  "fonts": "36 upstream woff2 files; bundled fallback fonts only in normal web runtime; external webfont switch enabled",
+  "runtime": "No server-side document service, telemetry, or auto-updater was added",
+  "inputRelease": "rhwp-0.8.7-1a76570e",
+  "inputBundleSha256": "d72d6bbe80ee026f2d7879202b2d74d68b312c2bc3e259cf423c8f20ec48c4bb",
+  "outputBundleSha256": "5944101c70f2a72380dcc023b5b9925e31dc2796960099fd5190e73dd846b396",
+  "baseQualification": "Performed on 2026-10-08 for the initial release; not automatically repeated by rebuild.ps1. SDK connects, public upstream KTX HWP opens, SVG renders, export reopens at same page count; zero external requests/SW/HTTP failures/runtime errors. Not a complete HWP compatibility or layout-fidelity certification.",
+  "qualification": "See CELL-WRAP-VERIFICATION.json; baseline comparison and candidate browser tests must pass before publication.",
+  "limitation": "Correctness fallback recalculates layout for each table-cell edit; large-document responsiveness has not been certified."
+}
