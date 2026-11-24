@@ -1,0 +1,10 @@
+{
+  "candidate": true,
+  "qualified": false,
+  "sourceRelease": "rhwp-0.8.7-1a76570e-cell-wrap-20261012",
+  "release": "rhwp-0.8.7-1a76570e-recovery-20261124",
+  "change": "Only explicit recovery=manual skips automatic startup recovery. Separate standalone recovery URL must remain accessible from host.",
+  "sourceBundleSha256": "5944101c70f2a72380dcc023b5b9925e31dc2796960099fd5190e73dd846b396",
+  "bundleSha256": "f09254f7e787c86c26fa842702c9efb43a59dfafbb55dab7edf22ae00a4fd88d",
+  "unchanged": "Draft storage, restore actions, document parsing, WASM, fonts and server authorization are not modified."
+}

@@ -1,0 +1,20 @@
+{
+  "release": "rhwp-0.8.7-1a76570e-recovery-20261124",
+  "status": "candidate-for-integration-testing",
+  "bundleSha256": "f09254f7e787c86c26fa842702c9efb43a59dfafbb55dab7edf22ae00a4fd88d",
+  "checks": {
+    "sourceBundlePinned": true,
+    "wasmUnchanged": true,
+    "editorLogicUnchangedExceptExplicitStartupRecoveryGuard": true,
+    "existingReleaseNeverOverwritten": true,
+    "manualFlagSkipsPromptInChrome": true,
+    "separateViewFindsSyntheticDraftInChrome": true,
+    "syntheticDraftContentRestoredInChrome": true
+  },
+  "scope": "Local Chrome fixture with synthetic text only. No production documents or server storage operations.",
+  "limitations": [
+    "Not a production performance certification.",
+    "Cross-site host storage partition and host integration still require verification before adoption.",
+    "Existing cell-wrap verification belongs to the input release, not this candidate."
+  ]
+}
